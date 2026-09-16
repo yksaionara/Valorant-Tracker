@@ -2,12 +2,14 @@ name: Build VALORANT Tracker Windows
 
 on:
   workflow_dispatch:
+  push:
+    branches: [ release-build ]
 
 jobs:
   build-windows:
     runs-on: windows-2022
     permissions:
-      contents: read
+      contents: write
 
     steps:
       - name: Checkout build files
@@ -136,3 +138,16 @@ jobs:
           path: release_output/*.exe
           if-no-files-found: error
           retention-days: 14
+
+      - name: Publish GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $assets = Get-ChildItem 'release_output\*.exe' | ForEach-Object { $_.FullName }
+          gh release create v1.9.3 $assets `
+            --repo $env:GITHUB_REPOSITORY `
+            --target $env:GITHUB_SHA `
+            --title 'VALORANT Tracker 1.9.3' `
+            --notes 'English-only build with one-click Dodge. Made with love by 5r9v.'
