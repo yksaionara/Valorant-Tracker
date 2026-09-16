@@ -28,7 +28,10 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          $b64 = (Get-Content 'builder\patch\5r9v_patch_gz.b64' -Raw).Trim()
+          $parts = Get-ChildItem 'builder\patch\chunks\part*.txt' -File | Sort-Object Name
+          if ($parts.Count -ne 5) { throw "Expected 5 patch chunks, found $($parts.Count)." }
+          $b64 = (($parts | ForEach-Object { (Get-Content $_.FullName -Raw).Trim() }) -join '')
+          if ($b64.Length -ne 34980) { throw "Patch payload length mismatch: $($b64.Length)." }
           $compressed = [Convert]::FromBase64String($b64)
           $input = [System.IO.MemoryStream]::new($compressed)
           $gzip = [System.IO.Compression.GZipStream]::new($input, [System.IO.Compression.CompressionMode]::Decompress)
