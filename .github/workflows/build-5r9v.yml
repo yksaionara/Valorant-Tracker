@@ -58,6 +58,31 @@ jobs:
         with:
           targets: x86_64-pc-windows-msvc
 
+      - name: Install NASM
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          choco install nasm -y --no-progress
+          $candidates = @(
+            'C:\Program Files\NASM',
+            'C:\tools\nasm',
+            'C:\ProgramData\chocolatey\bin'
+          )
+          $nasm = $null
+          foreach ($dir in $candidates) {
+            if (Test-Path (Join-Path $dir 'nasm.exe')) {
+              $nasm = Join-Path $dir 'nasm.exe'
+              $dir | Out-File -FilePath $env:GITHUB_PATH -Append
+              break
+            }
+          }
+          if (-not $nasm) {
+            $cmd = Get-Command nasm -ErrorAction SilentlyContinue
+            if ($cmd) { $nasm = $cmd.Source }
+          }
+          if (-not $nasm) { throw 'NASM installation succeeded but nasm.exe was not found.' }
+          & $nasm -v
+
       - name: Cache Rust build
         uses: Swatinem/rust-cache@v2
         with:
@@ -73,6 +98,7 @@ jobs:
           pnpm --version
           rustc --version
           cargo --version
+          nasm -v
 
       - name: Install frontend dependencies
         working-directory: source
