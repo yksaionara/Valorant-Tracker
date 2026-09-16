@@ -57,6 +57,9 @@ jobs:
           if (Select-String -Path backend/app.py,backend/scout_commands.py,backend/ws_server.py,backend/requirements.txt -Pattern 'remote_ably|enable_remote|disable_remote|"remote"|ably==' -Quiet) {
             throw 'Phone remote-mode code is still reachable.'
           }
+          if (-not (Test-Path 'frontend_snapshot/dashboard/index.html')) { throw 'Pinned dashboard snapshot is missing.' }
+          if (-not (Test-Path 'assets/valradiant-logo.png')) { throw 'Custom in-app logo is missing.' }
+          if (-not (Test-Path 'assets/valradiant-clone-67.ico')) { throw 'Custom Windows icon is missing.' }
 
       - name: Build Windows executable
         working-directory: valradiant-clone-67
@@ -69,13 +72,15 @@ jobs:
             '--onefile',
             '--windowed',
             '--name=ValRadiant Clone 67.0',
-            '--icon=assets/valorant-scout.ico',
+            '--icon=assets/valradiant-clone-67.ico',
             '--version-file=windows_version_info.txt',
             '--paths=backend',
             '--add-data=VERSION;.',
             '--add-data=LICENSE;.',
             '--add-data=MODIFICATIONS.md;.',
             '--add-data=backend/offline_chat.pem;backend',
+            '--add-data=frontend_snapshot;frontend_snapshot',
+            '--add-data=assets/valradiant-logo.png;assets',
             '--collect-all=webview',
             '--collect-all=valclient',
             '--hidden-import=clr',
