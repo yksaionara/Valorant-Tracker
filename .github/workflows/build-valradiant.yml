@@ -18,12 +18,19 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Prepare modified ValRadiant source
-        shell: bash
+        shell: pwsh
         run: |
           git clone https://github.com/kryotrades/Valorant-Scout.git valradiant-clone-67
           git -C valradiant-clone-67 checkout ab466b7da5c44412567baa5b82a5c9d890b71a10
-          base64 -d patch/valradiant-clone-67.patch.gz.b64 | gzip -d > "$RUNNER_TEMP/valradiant-clone-67.patch"
-          git -C valradiant-clone-67 apply --binary "$RUNNER_TEMP/valradiant-clone-67.patch"
+          $encoded = (Get-Content 'patch/valradiant-clone-67.patch.gz.b64' -Raw) -replace '\s', ''
+          $gzipPath = Join-Path $env:RUNNER_TEMP 'valradiant-clone-67.patch.gz'
+          $patchPath = Join-Path $env:RUNNER_TEMP 'valradiant-clone-67.patch'
+          [IO.File]::WriteAllBytes($gzipPath, [Convert]::FromBase64String($encoded))
+          $input = [IO.File]::OpenRead($gzipPath)
+          $output = [IO.File]::Create($patchPath)
+          $gzip = [IO.Compression.GZipStream]::new($input, [IO.Compression.CompressionMode]::Decompress)
+          try { $gzip.CopyTo($output) } finally { $gzip.Dispose(); $output.Dispose(); $input.Dispose() }
+          git -C valradiant-clone-67 apply --binary $patchPath
 
       - name: Set up Python 3.12 x64
         uses: actions/setup-python@v5
