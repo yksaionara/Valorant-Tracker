@@ -1,0 +1,107 @@
+name: Build 5r9v Windows EXE
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-windows:
+    runs-on: windows-2022
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout 5r9v build files
+        uses: actions/checkout@v4
+        with:
+          path: builder
+
+      - name: Checkout upstream source
+        uses: actions/checkout@v4
+        with:
+          repository: ruwiss/valorant-tracker
+          ref: 3634f87e079f268fb637b6f021106a5a706010fc
+          path: source
+
+      - name: Reconstruct and apply 5r9v patch
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $b64 = (Get-Content 'builder\patch\5r9v_patch_gz.b64' -Raw).Trim()
+          $compressed = [Convert]::FromBase64String($b64)
+          $input = [System.IO.MemoryStream]::new($compressed)
+          $gzip = [System.IO.Compression.GZipStream]::new($input, [System.IO.Compression.CompressionMode]::Decompress)
+          $output = [System.IO.File]::Create((Join-Path $PWD '5r9v.patch'))
+          $gzip.CopyTo($output)
+          $output.Dispose(); $gzip.Dispose(); $input.Dispose()
+          Set-Location source
+          git apply --check ..\5r9v.patch
+          git apply ..\5r9v.patch
+          Write-Host '5r9v patch applied successfully.'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+          run_install: false
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: source/pnpm-lock.yaml
+
+      - name: Install Rust MSVC toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: source/src-tauri -> target
+
+      - name: Configure Windows build environment
+        shell: pwsh
+        run: |
+          if (Test-Path 'C:\Program Files\LLVM\bin\libclang.dll') {
+            'LIBCLANG_PATH=C:\Program Files\LLVM\bin' | Out-File -FilePath $env:GITHUB_ENV -Append
+          }
+          node --version
+          pnpm --version
+          rustc --version
+          cargo --version
+
+      - name: Install frontend dependencies
+        working-directory: source
+        run: pnpm install --frozen-lockfile
+
+      - name: Build 5r9v app and NSIS installer
+        working-directory: source
+        run: pnpm exec tauri build --bundles nsis
+
+      - name: Collect EXEs
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force -Path release_output | Out-Null
+          $setup = Get-ChildItem -Path 'source\src-tauri\target\release\bundle\nsis' -Filter '*.exe' -File | Select-Object -First 1
+          if (-not $setup) { throw 'NSIS setup EXE not found.' }
+          Copy-Item $setup.FullName 'release_output\5r9v_VALORANT_Tracker_1.9.3_Setup.exe'
+          $portable = Get-ChildItem -Path 'source\src-tauri\target\release' -Filter '*.exe' -File |
+            Where-Object { $_.Name -notmatch 'build-script' } |
+            Sort-Object Length -Descending |
+            Select-Object -First 1
+          if (-not $portable) { throw 'Portable application EXE not found.' }
+          Copy-Item $portable.FullName 'release_output\5r9v_VALORANT_Tracker_1.9.3.exe'
+          Get-FileHash release_output\*.exe -Algorithm SHA256 | Format-Table -AutoSize
+
+      - name: Upload finished Windows EXEs
+        uses: actions/upload-artifact@v4
+        with:
+          name: 5r9v-valorant-tracker-windows
+          path: release_output/*.exe
+          if-no-files-found: error
+          retention-days: 14
