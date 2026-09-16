@@ -1,29 +1,27 @@
-# 5r9v VALORANT Tracker
+# VALORANT Tracker
 
-<p align="center">
-  <img src="images/banner.webp" alt="VALORANT Tracker" width="800">
-</p>
+Desktop companion for VALORANT with live match information, player stats, cosmetics, presets, store tools, social features, and a one-click Agent Select Dodge button.
 
-Desktop overlay for VALORANT, customized and maintained by **5r9v**. Live match data, automation tools, chat, and one-click Agent Select dodge.
+**Made with love by 5r9v.**
 
 Windows builds are produced automatically with GitHub Actions.
 
 ## Features
 
-- Dodge the current match directly from Agent Select without closing VALORANT (normal Riot penalties still apply).
+- One-click Dodge during Agent Select without a confirmation dialog. Normal Riot dodge penalties can still apply.
+- Map-based agent select/lock presets.
+- Player weapon skins, buddies, sprays, flex, cards, titles, rank and combat stats.
+- Premade/stack detection and recent teammate information.
+- Last-match roster and score retention.
+- Daily Store and Night Market with currency balances.
+- Player-name translation.
+- Social/friend information and overlay chat.
+- Discord Rich Presence.
+- Game-setting presets and backups.
 
-- Lock a different agent on each map when the match starts.
-- See other players' weapon skins in the lobby, plus buddies, sprays, and flex.
-- Premades share a color on the roster. Parties are inferred from recent matches.
-- Open a player to see who they queued with in their last 12 games, and which agents they play most.
-- In The Range your own card is on the roster, so you can check skins and stats without queuing.
-- After a game the last-match card keeps the score and roster. Friend requests can be sent from there.
-- Player stats: K/D, win rate, ACS, peak rank, and other combat numbers.
-- Daily shop and Night Market, with VP and Radianite balances.
-- Translate a foreign player name and see which language it came from.
-- Overlay chat shows friend DMs. In-game shortcuts (`sa` / `as`, symbols, agent tags) still expand; custom rules live in settings.
-- Discord Rich Presence can show your map and score.
-- Save sensitivity, crosshair, keybinds, audio, and video, then apply that preset to another account.
+## Language
+
+The application UI is English only.
 
 ## License
 
