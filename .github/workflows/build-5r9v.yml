@@ -41,6 +41,10 @@ jobs:
           Set-Location source
           git apply --check ..\tracker.patch
           git apply ..\tracker.patch
+          $settingsPath = 'src\components\SettingsPanel.tsx'
+          $settings = Get-Content $settingsPath -Raw
+          $settings = $settings.Replace('[setHotkey, locale, cancelRecording]', '[setHotkey, cancelRecording]')
+          Set-Content -Path $settingsPath -Value $settings -NoNewline
           Write-Host 'Tracker patch applied successfully.'
 
       - name: Install pnpm
