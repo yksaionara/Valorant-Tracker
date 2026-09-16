@@ -6,6 +6,8 @@
 
 Desktop overlay for VALORANT, customized and maintained by **5r9v**. Live match data, automation tools, chat, and one-click Agent Select dodge.
 
+Windows builds are produced automatically with GitHub Actions.
+
 ## Features
 
 - Dodge the current match directly from Agent Select without closing VALORANT (normal Riot penalties still apply).
