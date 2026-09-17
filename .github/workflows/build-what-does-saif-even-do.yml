@@ -166,5 +166,3 @@ jobs:
           gh release upload auto-update $releaseExe --repo yksaionara/Valorant-Tracker --clobber
           gh release upload auto-update $releaseZip --repo yksaionara/Valorant-Tracker --clobber
           gh release upload auto-update $manifestPath --repo yksaionara/Valorant-Tracker --clobber
-          gh release delete-asset auto-update 'what-does-saif-even-do.exe' --repo yksaionara/Valorant-Tracker --yes 2>$null
-          if ($LASTEXITCODE -ne 0) { Write-Host 'Legacy hyphenated release asset was already absent.' }
