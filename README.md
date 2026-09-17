@@ -67,16 +67,6 @@ Do not rename or move the EXE while an update is being installed.
 
 The build is unsigned. A checksum verifies download integrity; it is not a substitute for a commercial code-signing certificate or an antivirus scan.
 
-## Source and reproducible build
-
-This repository stores the complete modification patch and build workflow. GitHub Actions checks out the exact upstream Valorant Scout v2.1.0 commit, applies the patch, validates the removal of remote mode, compiles the Python sources, builds the Windows executable with PyInstaller, verifies the PE metadata, and publishes the EXE plus its update manifest.
-
-The base source is [kryotrades/Valorant-Scout](https://github.com/kryotrades/Valorant-Scout) at commit `ab466b7da5c44412567baa5b82a5c9d890b71a10`.
-
 ## Disclaimer
 
-This is an unofficial community modification. It is not affiliated with, endorsed by, or sponsored by Riot Games. Features that automate client actions may violate Riot Games' rules or result in ordinary dodge penalties; use them at your own risk.
-
-## License and attribution
-
-This modified distribution remains licensed under the [GNU General Public License v3.0](https://github.com/kryotrades/Valorant-Scout/blob/ab466b7da5c44412567baa5b82a5c9d890b71a10/LICENSE). Original Valorant Scout copyright and third-party notices remain with their respective authors. The modification patch and build instructions are published here so recipients can reconstruct the corresponding source for this release.
+This is an unofficial community modification. It is not affiliated with, endorsed by, or sponsored by Riot Games. Features that automate client actions may violate Riot Games' rules or result in ordinary dodge penalties; use them at your own risk.\
