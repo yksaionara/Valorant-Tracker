@@ -2,7 +2,9 @@
 
 **Decieve Clone 67.0** is a standalone Windows desktop companion for VALORANT. It keeps the familiar dashboard inside a native app window and bundles the local backend, so users do not need Python, a browser tab, or a separate installer.
 
-[Download the latest Windows EXE](https://github.com/yksaionara/Valorant-Tracker/releases/download/auto-update/what%20does%20saif%20even%20do.exe)
+[Download the latest Windows ZIP](https://github.com/yksaionara/Valorant-Tracker/releases/download/auto-update/what-does-saif-even-do-Windows.zip)
+
+The ZIP contains the executable with its exact Windows filename: **`what does saif even do.exe`**. The dotted EXE asset on the release page is the identical updater payload; GitHub automatically replaces spaces in raw release-asset names with periods.
 
 ## Automatic updates
 
@@ -48,8 +50,8 @@ The full modification record is available in `MODIFICATIONS.md` after reconstruc
 
 ## Installation
 
-1. Download **`what does saif even do.exe`** from the release link above.
-2. Place it in a folder where your Windows account can write files.
+1. Download the release ZIP from the link above.
+2. Extract **`what does saif even do.exe`** into a folder where your Windows account can write files.
 3. Run it. Windows SmartScreen may show an **Unknown publisher** warning because the build is not code-signed.
 4. Start VALORANT for live match data. With VALORANT closed, the app can display demo data.
 

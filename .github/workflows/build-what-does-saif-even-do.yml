@@ -123,7 +123,9 @@ jobs:
           New-Item -ItemType Directory -Force -Path $releaseDir | Out-Null
           $sourceExe = Resolve-Path 'valradiant-clone-67/dist/what does saif even do.exe'
           $releaseExe = Join-Path $releaseDir 'what does saif even do.exe'
+          $releaseZip = Join-Path $releaseDir 'what-does-saif-even-do-Windows.zip'
           Copy-Item $sourceExe $releaseExe -Force
+          Compress-Archive -LiteralPath $sourceExe -DestinationPath $releaseZip -CompressionLevel Optimal -Force
           $hash = (Get-FileHash $releaseExe -Algorithm SHA256).Hash.ToLowerInvariant()
           $size = (Get-Item $releaseExe).Length
           $manifest = [ordered]@{
@@ -131,7 +133,8 @@ jobs:
             version = '67.0'
             # Keep the original repository alias so existing installed builds continue
             # to trust this URL. GitHub permanently redirects it to Valorant-Tracker.
-            url = 'https://github.com/yksaionara/123/releases/download/auto-update/what%20does%20saif%20even%20do.exe'
+            # GitHub normalizes spaces in raw release-asset names to periods.
+            url = 'https://github.com/yksaionara/123/releases/download/auto-update/what.does.saif.even.do.exe'
             sha256 = $hash
             size = $size
           }
@@ -142,7 +145,7 @@ jobs:
 
           This is the current public Windows release of **Decieve Clone 67.0**.
 
-          Download **what does saif even do.exe** below and run it directly. No Python installation is required.
+          Download **what-does-saif-even-do-Windows.zip**, extract **what does saif even do.exe**, and run it directly. No Python installation is required. GitHub replaces spaces in raw release-asset names with periods, so the dotted EXE is retained as the automatic-update payload.
 
           ## Automatic updates
 
@@ -161,6 +164,7 @@ jobs:
             gh release edit auto-update --repo yksaionara/Valorant-Tracker --title 'what does saif even do.exe — Decieve Clone 67.0' --notes $releaseNotes
           }
           gh release upload auto-update $releaseExe --repo yksaionara/Valorant-Tracker --clobber
+          gh release upload auto-update $releaseZip --repo yksaionara/Valorant-Tracker --clobber
           gh release upload auto-update $manifestPath --repo yksaionara/Valorant-Tracker --clobber
           gh release delete-asset auto-update 'what-does-saif-even-do.exe' --repo yksaionara/Valorant-Tracker --yes 2>$null
           if ($LASTEXITCODE -ne 0) { Write-Host 'Legacy hyphenated release asset was already absent.' }
