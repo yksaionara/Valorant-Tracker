@@ -166,3 +166,32 @@ jobs:
           gh release upload auto-update $releaseExe --repo yksaionara/Valorant-Tracker --clobber
           gh release upload auto-update $releaseZip --repo yksaionara/Valorant-Tracker --clobber
           gh release upload auto-update $manifestPath --repo yksaionara/Valorant-Tracker --clobber
+
+          # Prove that an unauthenticated installed app can fetch and verify the
+          # just-published update through the same public URLs it uses at launch.
+          $publicManifestUrl = "https://github.com/yksaionara/123/releases/download/auto-update/manifest.json?run=${{ github.run_id }}"
+          $published = $null
+          for ($attempt = 1; $attempt -le 8; $attempt++) {
+            try {
+              $candidate = Invoke-RestMethod -Uri $publicManifestUrl -Headers @{ 'Cache-Control' = 'no-cache' } -TimeoutSec 20
+              if ([int]$candidate.build -eq [int]'${{ github.run_number }}') {
+                $published = $candidate
+                break
+              }
+            } catch {
+              Write-Host "Public manifest check $attempt is not ready yet: $($_.Exception.Message)"
+            }
+            Start-Sleep -Seconds 5
+          }
+          if ($null -eq $published) { throw 'The public auto-update manifest did not publish the current build.' }
+          if ($published.url -ne $manifest.url) { throw 'The public manifest contains an unexpected download URL.' }
+          if ([int64]$published.size -ne [int64]$size) { throw 'The public manifest contains an unexpected file size.' }
+          if ($published.sha256 -ne $hash) { throw 'The public manifest contains an unexpected SHA-256 hash.' }
+
+          $publicExe = Join-Path $releaseDir 'public-update-verification.exe'
+          $cacheSeparator = if ($published.url.Contains('?')) { '&' } else { '?' }
+          Invoke-WebRequest -Uri "$($published.url)${cacheSeparator}run=${{ github.run_id }}" -OutFile $publicExe -Headers @{ 'Cache-Control' = 'no-cache' } -TimeoutSec 120
+          if ((Get-Item $publicExe).Length -ne $size) { throw 'The public update download has the wrong size.' }
+          if ((Get-FileHash $publicExe -Algorithm SHA256).Hash.ToLowerInvariant() -ne $hash) { throw 'The public update download has the wrong SHA-256 hash.' }
+          $publicBytes = [IO.File]::ReadAllBytes($publicExe)
+          if ($publicBytes[0] -ne 0x4D -or $publicBytes[1] -ne 0x5A) { throw 'The public update download is not a Windows PE executable.' }
