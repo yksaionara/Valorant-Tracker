@@ -1,0 +1,166 @@
+name: Build what does saif even do.exe
+
+on:
+  push:
+    branches: [main, valradiant-clone-67]
+    paths-ignore:
+      - 'updates/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows-exe:
+    runs-on: windows-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Prepare modified ValRadiant source
+        shell: pwsh
+        run: |
+          git clone https://github.com/kryotrades/Valorant-Scout.git valradiant-clone-67
+          git -C valradiant-clone-67 checkout ab466b7da5c44412567baa5b82a5c9d890b71a10
+          $encoded = (Get-Content 'patch/valradiant-clone-67.patch.gz.b64' -Raw) -replace '\s', ''
+          $gzipPath = Join-Path $env:RUNNER_TEMP 'valradiant-clone-67.patch.gz'
+          $patchPath = Join-Path $env:RUNNER_TEMP 'valradiant-clone-67.patch'
+          [IO.File]::WriteAllBytes($gzipPath, [Convert]::FromBase64String($encoded))
+          $input = [IO.File]::OpenRead($gzipPath)
+          $output = [IO.File]::Create($patchPath)
+          $gzip = [IO.Compression.GZipStream]::new($input, [IO.Compression.CompressionMode]::Decompress)
+          try { $gzip.CopyTo($output) } finally { $gzip.Dispose(); $output.Dispose(); $input.Dispose() }
+          git -C valradiant-clone-67 apply --binary $patchPath
+          Set-Content -Path 'valradiant-clone-67/BUILD_ID' -Value '${{ github.run_number }}' -Encoding ascii
+
+      - name: Set up Python 3.12 x64
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          architecture: x64
+          cache: pip
+          cache-dependency-path: valradiant-clone-67/requirements-desktop.txt
+
+      - name: Install pinned dependencies
+        working-directory: valradiant-clone-67
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-desktop.txt
+
+      - name: Validate source and removed remote mode
+        working-directory: valradiant-clone-67
+        shell: pwsh
+        run: |
+          python -m compileall -q desktop_app.py backend
+          python backend/scout_commands.py
+          python backend/offline_launch.py
+          if (Select-String -Path backend/app.py,backend/scout_commands.py,backend/ws_server.py,backend/requirements.txt -Pattern 'remote_ably|enable_remote|disable_remote|"remote"|ably==' -Quiet) {
+            throw 'Phone remote-mode code is still reachable.'
+          }
+          if (-not (Test-Path 'frontend_snapshot/dashboard/index.html')) { throw 'Pinned dashboard snapshot is missing.' }
+          if (-not (Test-Path 'assets/valradiant-logo.png')) { throw 'Custom in-app logo is missing.' }
+          if (-not (Test-Path 'assets/valradiant-clone-67.ico')) { throw 'Custom Windows icon is missing.' }
+
+      - name: Build Windows executable
+        working-directory: valradiant-clone-67
+        shell: pwsh
+        run: |
+          $hidden = Get-ChildItem backend -Filter '*.py' | ForEach-Object { "--hidden-import=$($_.BaseName)" }
+          $buildArgs = @(
+            '--noconfirm',
+            '--clean',
+            '--onefile',
+            '--windowed',
+            '--name=what does saif even do',
+            '--icon=assets/valradiant-clone-67.ico',
+            '--version-file=windows_version_info.txt',
+            '--paths=backend',
+            '--add-data=VERSION;.',
+            '--add-data=LICENSE;.',
+            '--add-data=MODIFICATIONS.md;.',
+            '--add-data=BUILD_ID;.',
+            '--add-data=backend/offline_chat.pem;backend',
+            '--add-data=frontend_snapshot;frontend_snapshot',
+            '--add-data=assets/valradiant-logo.png;assets',
+            '--collect-all=webview',
+            '--collect-all=valclient',
+            '--hidden-import=clr',
+            '--hidden-import=System',
+            '--hidden-import=webview.platforms.edgechromium'
+          ) + $hidden + @('desktop_app.py')
+          python -m PyInstaller @buildArgs
+
+      - name: Verify PE and product metadata
+        working-directory: valradiant-clone-67
+        shell: pwsh
+        run: |
+          $exe = Resolve-Path 'dist/what does saif even do.exe'
+          $bytes = [System.IO.File]::ReadAllBytes($exe)
+          if ($bytes[0] -ne 0x4D -or $bytes[1] -ne 0x5A) { throw 'Output is not a Windows PE executable.' }
+          $info = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($exe)
+          if ($info.ProductName -ne 'ValRadiant Clone 67.0') { throw "Unexpected product name: $($info.ProductName)" }
+          if ((Get-Item $exe).Length -lt 10000000) { throw 'Executable is unexpectedly small.' }
+          Get-FileHash $exe -Algorithm SHA256 | Format-List
+
+      - name: Upload executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: what-does-saif-even-do-Windows
+          path: valradiant-clone-67/dist/what does saif even do.exe
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 30
+
+      - name: Publish verified auto-update assets
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $releaseDir = Join-Path $env:RUNNER_TEMP 'decieve-clone-auto-update'
+          New-Item -ItemType Directory -Force -Path $releaseDir | Out-Null
+          $sourceExe = Resolve-Path 'valradiant-clone-67/dist/what does saif even do.exe'
+          $releaseExe = Join-Path $releaseDir 'what does saif even do.exe'
+          Copy-Item $sourceExe $releaseExe -Force
+          $hash = (Get-FileHash $releaseExe -Algorithm SHA256).Hash.ToLowerInvariant()
+          $size = (Get-Item $releaseExe).Length
+          $manifest = [ordered]@{
+            build = [int]'${{ github.run_number }}'
+            version = '67.0'
+            # Keep the original repository alias so existing installed builds continue
+            # to trust this URL. GitHub permanently redirects it to Valorant-Tracker.
+            url = 'https://github.com/yksaionara/123/releases/download/auto-update/what%20does%20saif%20even%20do.exe'
+            sha256 = $hash
+            size = $size
+          }
+          $manifestPath = Join-Path $releaseDir 'manifest.json'
+          $manifest | ConvertTo-Json | Set-Content $manifestPath -Encoding utf8NoBOM
+          $releaseNotes = @'
+          # what does saif even do.exe
+
+          This is the current public Windows release of **Decieve Clone 67.0**.
+
+          Download **what does saif even do.exe** below and run it directly. No Python installation is required.
+
+          ## Automatic updates
+
+          This release includes a restart-time updater. After installing this build once, future published builds are downloaded when the app starts, verified against the size and SHA-256 hash in `manifest.json`, installed, and relaunched automatically. If GitHub is unavailable, the installed version opens normally and checks again on the next launch.
+
+          ## Important
+
+          - Windows 10/11 x64 is required.
+          - The executable is unsigned, so Windows SmartScreen may display an Unknown publisher warning.
+          - This is an unofficial community modification and is not affiliated with Riot Games.
+          '@
+          gh release view auto-update --repo yksaionara/Valorant-Tracker *> $null
+          if ($LASTEXITCODE -ne 0) {
+            gh release create auto-update --repo yksaionara/Valorant-Tracker --target $env:GITHUB_SHA --title 'what does saif even do.exe — Decieve Clone 67.0' --notes $releaseNotes
+          } else {
+            gh release edit auto-update --repo yksaionara/Valorant-Tracker --title 'what does saif even do.exe — Decieve Clone 67.0' --notes $releaseNotes
+          }
+          gh release upload auto-update $releaseExe --repo yksaionara/Valorant-Tracker --clobber
+          gh release upload auto-update $manifestPath --repo yksaionara/Valorant-Tracker --clobber
+          gh release delete-asset auto-update 'what-does-saif-even-do.exe' --repo yksaionara/Valorant-Tracker --yes 2>$null
+          if ($LASTEXITCODE -ne 0) { Write-Host 'Legacy hyphenated release asset was already absent.' }
